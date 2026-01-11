@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde_json::Value;
+use std::error::Error;
 
 #[derive(Debug, Deserialize)]
 struct OpenSkyResponse {
@@ -39,6 +40,7 @@ impl StateVector {
         let on_ground = values[8].as_bool().unwrap_or(false);
         let velocity = values[9].as_f64();
 
+        // Returning a StateVector if all values are there, or None otherwise
         Some(StateVector {
             icao24,
             callsign,
@@ -51,25 +53,42 @@ impl StateVector {
     }
 }
 
-fn main() {
-    let raw_data = r#"
-    {
-        "time": 1683100000,
-        "states": [
-            ["4b1814", "HB-JWC", "Switzerland", 1620000000, 1620000000, 7.5, 47.5, 10000.5, false, 200.0]
-        ]
-    }
-    "#;
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    // HTTP Request:
+    let client = reqwest::Client::new();
+    let url = "https://opensky-network.org/api/states/all";
 
-    let response: OpenSkyResponse = serde_json::from_str(raw_data).unwrap();
+    println!("Getting data from OpenSky...");
 
+    // This now sends a request (.send()) and waits (.await).
+    // The '?' at the end replaces the .unwrap():
+    // If there is an error, return it right away. If success, continue.
+    let resp = client.get(url)
+        .send()
+        .await?
+        .json::<OpenSkyResponse>() // we tell it directly to try and parse it as OpenSkyResponse Struct
+        .await?;
+
+    // Creating an empty vector to store the flights data.
     let mut flights = Vec::new();
 
-    for raw_state in response.states {
+    // Iterate through the vector of data that is in response.
+    // Try to create the StateVector struct for each flight from the values.
+    // If that worked, push the flight into the flights vector.
+    for raw_state in resp.states {
         if let Some(flight) = StateVector::from_values(&raw_state) {
             flights.push(flight);
         }
     }
 
-    println!("{:?}", flights);
+    println!("Parsed: {} Flights.", flights.len());
+
+    // Return the first 5 flights to check whether it works.
+    // .iter().take(5) is like python slicing [:5]
+    for flight in flights.iter().take(5) {
+        println!("{:?}", flight);
+    }
+
+    Ok(())
 }
