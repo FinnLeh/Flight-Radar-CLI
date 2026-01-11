@@ -2,6 +2,30 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
 use clap::Parser;
+use tabled::{Tabled, settings::Style};
+
+#[derive(Tabled)]
+struct AnomalyDisplay {
+    icao: String,
+    callsign: String,
+    country: String,
+    #[tabled(rename = "Velocity (m/s)")]
+    velocity: f64,
+    #[tabled(rename = "On Ground")]
+    on_ground: bool,
+}
+
+impl From<&StateVector> for AnomalyDisplay {
+    fn from(s: &StateVector) -> Self {
+        Self {
+            icao: s.icao24.clone(),
+            callsign: s.callsign.clone(),
+            country: s.origin_country.clone(),
+            velocity: s.velocity.unwrap_or(0.0),
+            on_ground: s.on_ground,
+        }
+    }
+}
 
 /// A simple CLI tool to scan OpenSky Data for Anomalies.
 #[derive(Parser, Debug)]
@@ -125,22 +149,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("{:?}", flight);
     }
 
-    // Testing the anomalies:
+    // Filtering the anomalies:
     let anomalies: Vec<&StateVector> = flights.iter()
         .filter(|f| f.is_anomaly(args.speed, &args.country)) // lambda function (Closure)
         .collect();
 
+    // Convert anomalies into rows of the display format:
+    let display_rows: Vec<AnomalyDisplay> = anomalies.iter()
+        .map(|f| AnomalyDisplay::from(*f)) // *f dereferences the &&StateVector
+        .collect();
+
+    // Build table as a mutale and save it so we can change it later:
+    let mut table = tabled::Table::new(display_rows);
+    // Style the table (with modern style, gives round edges):
+    table.with(Style::modern());
+
     println!("Davon Anomalien gefunden: {}", anomalies.len());
 
-    for anomaly in anomalies {
-        // print interesting data:
-        println!("ANOMALY DETECTED: [{}] {} from {} @ {:.1} m/s",
-            anomaly.icao24,
-            anomaly.callsign,
-            anomaly.origin_country,
-            anomaly.velocity.unwrap_or(0.0)
-        );
-    }
+    println!("{}", table);
 
     Ok(())
 }
