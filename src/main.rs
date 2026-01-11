@@ -1,6 +1,20 @@
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
+use clap::Parser;
+
+/// A simple CLI tool to scan OpenSky Data for Anomalies.
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Speed Limit in m/s (Standard: 300.0)
+    #[arg(short, long, default_value_t = 300.0)]
+    speed: f64,
+
+    /// Country that we want to search for (Standard: "Russian Federation')
+    #[arg(short, long, default_value = "Russian Federation")]
+    country: String,
+}
 
 #[derive(Debug, Deserialize)]
 struct OpenSkyResponse {
@@ -52,17 +66,17 @@ impl StateVector {
         })
     }
 
-    fn is_anomaly(&self) -> bool {
+    fn is_anomaly(&self, threshold_speed: f64, target_country: &str) -> bool {
         // Criteria 1: Speed.
         // Unwrap velocity:
         let speed = self.velocity.unwrap_or(0.0);
-        if speed > 300.0 {
+        if speed > threshold_speed {
             return true;
         }
 
         // Criteria 2: Origin
         // E.g., Russia:
-        if self.origin_country == "Russian Federation" {
+        if self.origin_country == target_country {
             return true;
         }
 
@@ -72,6 +86,10 @@ impl StateVector {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Parse arguments:
+    let args = Args::parse();
+    println!("Searchin for Anomalies: Speed > {} m/s, Country: '{}'", args.speed, args.country);
+
     // HTTP Request:
     let client = reqwest::Client::new();
     let url = "https://opensky-network.org/api/states/all";
@@ -109,7 +127,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Testing the anomalies:
     let anomalies: Vec<&StateVector> = flights.iter()
-        .filter(|f| f.is_anomaly()) // lambda function (Closure)
+        .filter(|f| f.is_anomaly(args.speed, &args.country)) // lambda function (Closure)
         .collect();
 
     println!("Davon Anomalien gefunden: {}", anomalies.len());
