@@ -51,6 +51,23 @@ impl StateVector {
             velocity,
         })
     }
+
+    fn is_anomaly(&self) -> bool {
+        // Criteria 1: Speed.
+        // Unwrap velocity:
+        let speed = self.velocity.unwrap_or(0.0);
+        if speed > 300.0 {
+            return true;
+        }
+
+        // Criteria 2: Origin
+        // E.g., Russia:
+        if self.origin_country == "Russian Federation" {
+            return true;
+        }
+
+        false
+    }
 }
 
 #[tokio::main]
@@ -88,6 +105,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // .iter().take(5) is like python slicing [:5]
     for flight in flights.iter().take(5) {
         println!("{:?}", flight);
+    }
+
+    // Testing the anomalies:
+    let anomalies: Vec<&StateVector> = flights.iter()
+        .filter(|f| f.is_anomaly()) // lambda function (Closure)
+        .collect();
+
+    println!("Davon Anomalien gefunden: {}", anomalies.len());
+
+    for anomaly in anomalies {
+        // print interesting data:
+        println!("ANOMALY DETECTED: [{}] {} from {} @ {:.1} m/s",
+            anomaly.icao24,
+            anomaly.callsign,
+            anomaly.origin_country,
+            anomaly.velocity.unwrap_or(0.0)
+        );
     }
 
     Ok(())
