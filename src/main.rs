@@ -7,11 +7,11 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Speed Limit in m/s (Standard: 300.0)
+    /// Speed Limit in m/s
     #[arg(short, long, default_value_t = 300.0)]
     speed: f64,
 
-    /// Country that we want to search for (Standard: "Russian Federation')
+    /// Country that you want to search for
     #[arg(short, long, default_value = "Russian Federation")]
     country: String,
 }
