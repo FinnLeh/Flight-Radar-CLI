@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Convert anomalies into rows of the display format:
     let display_rows: Vec<AnomalyDisplay> = anomalies.iter()
-        .map(|f| AnomalyDisplay::from(*f)) // *f dereferences the &&StateVector
+        .map(|f| AnomalyDisplay::new(*f, &args)) // *f dereferences the &&StateVector
         .collect();
 
     // Build table as a mutale and save it so we can change it later:
