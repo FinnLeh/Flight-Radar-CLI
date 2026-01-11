@@ -42,20 +42,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Parsed: {} Flights.", flights.len());
 
-    // Return the first 5 flights to check whether it works.
-    // .iter().take(5) is like python slicing [:5]
-    for flight in flights.iter().take(5) {
-        println!("{:?}", flight);
-    }
-
     // Filtering the anomalies:
-    let anomalies: Vec<&StateVector> = flights.iter()
-        .filter(|f| f.is_anomaly(&args)) // lambda function (Closure)
+    let anomalies: Vec<(&StateVector, String)> = flights.iter()
+        .filter_map(|f| {
+            // Check the plane:
+            match f.check_anomalies(&args) {
+                Some(reason) => Some((f, reason)), // Hit! Return values plus Reason
+                None => None,
+            }
+        })
         .collect();
+
+    println!("Anomalies found: {}", anomalies.len());
 
     // Convert anomalies into rows of the display format:
     let display_rows: Vec<AnomalyDisplay> = anomalies.iter()
-        .map(|f| AnomalyDisplay::new(*f, &args)) // *f dereferences the &&StateVector
+        .map(|(flight, reason)| AnomalyDisplay::new(flight, &args, reason.clone())) // *f dereferences the &&StateVector
         .collect();
 
     // Build table as a mutale and save it so we can change it later:
@@ -63,7 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Style the table (with modern style, gives round edges):
     table.with(Style::modern());
 
-    println!("Davon Anomalien gefunden: {}", anomalies.len());
+
 
     println!("{}", table);
 

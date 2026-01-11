@@ -92,45 +92,48 @@ impl StateVector {
         })
     }
 
-    pub fn is_anomaly(&self, args: &Args) -> bool {
-        // Criteria 1: Speed.
-        // Unwrap velocity:
+    pub fn check_anomalies(&self, args: &Args) -> Option<String> {
         let speed = self.velocity.unwrap_or(0.0);
         let alt = self.geo_altitude.unwrap_or(0.0);
-        if speed > args.speed {
-            return true;
+        let mut reasons = Vec::new();
+
+        // Hard Filter: Ignore any flights outside the height boundaries:
+        if let Some(min) = args.min_alt {
+            if alt < min { return None; } // below the min height
+        }
+        // If max_alt is set, check it:
+        if let Some(max) = args.max_alt {
+            if alt > max { return None; } // above the max height
         }
 
-        // Criteria 2: Origin
+        // Trigger 1: Speed.
+        if speed > args.speed {
+            reasons.push(format!("Speed ({:.0} > {})", speed, args.speed));
+        }
+
+        // Trigger 2: Origin Country
         // E.g., Russia:
         if self.origin_country == args.country {
-            return true;
+            reasons.push("Country".to_string());
         }
 
-        // Criteria 3: Geofence Check
+        // Trigger 3: Geofence
         if let (Some(target_lat), Some(target_lon)) = (args.lat, args.lon) {
             // Check if the flight has coords for us to calculate with:
             if let (Some(plane_lat), Some(plane_lon)) = (self.latitude, self.longitude) {
                 let distance = harversine_distance(target_lat, target_lon, plane_lat, plane_lon);
 
                 if distance < args.radius {
-                    // Hit the radius! Check height now:
-                    // If min_alt is set, check it:
-                    if let Some(min) = args.min_alt {
-                        if alt < min { return false; } // below the min height
-                    }
-                    // If max_alt is set, check it:
-                    if let Some(max) = args.max_alt {
-                        if alt > max { return false; } // above the max height
-                    }
-
-                    // Inside radius AND height limits:
-                    return true;
+                    reasons.push(format!("Geofence ({:.1}km)", distance));
                 }
             }
         }
 
-        false
+        if reasons.is_empty() {
+            None // No anomaly
+        } else {
+            Some(reasons.join(", "))
+        }
     }
 }
 
@@ -147,10 +150,12 @@ pub struct AnomalyDisplay {
     distance: String, // String, so that it can display N/A if no target specified
     #[tabled(rename = "On Ground")]
     on_ground: bool,
+    #[tabled(rename = "Reason")]
+    reason: String,
 }
 
 impl AnomalyDisplay {
-    pub fn new(s: &StateVector, args: &Args) -> Self {
+    pub fn new(s: &StateVector, args: &Args, reason: String) -> Self {
         let dist_str = if let (Some(lat), Some(lon), Some(p_lat), Some(p_lon))
             = (args.lat, args.lon, s.latitude, s.longitude) {
             let d = harversine_distance(lat, lon, p_lat, p_lon);
@@ -167,6 +172,7 @@ impl AnomalyDisplay {
             altitude: s.geo_altitude.unwrap_or(0.0),
             distance: dist_str,
             on_ground: s.on_ground,
+            reason,
         }
     }
 }
