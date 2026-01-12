@@ -69,3 +69,22 @@ pub fn save_kml(filename: &str, anomalies: &Vec<DefenseDisplay>) -> Result<(), B
     file.write_all(b"\n</Document>\n</kml>")?;
     Ok(())
 }
+
+/// Creates the Link File, that tells Google Earth to load intelligence.kml anew regularly
+pub fn create_network_link(filename: &str) -> Result<(), Box<dyn Error>> {
+    let content = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <kml xmlns="http://www.opengis.net/kml/2.2">
+        <NetworkLink>
+            <name>Flight Radar Live Feed</name>
+            <open>1</open>
+            <Link>
+                <href>intelligence.kml</href>
+                <refreshMode>onInterval</refreshMode>
+                <refreshInterval>5</refreshInterval> </Link>
+        </NetworkLink>
+    </kml>
+    "#;
+    let mut file = File::create(filename)?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
+}

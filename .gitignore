@@ -1,2 +1,5 @@
 /target
 intelligence.kml
+*.kml
+*.db
+*.csv
