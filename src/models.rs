@@ -1,6 +1,8 @@
-use serde::{Deserialize, Serialize};
-use clap::{Arg, Parser};
+use serde::{Deserialize, Serialize, Deserializer};
+use serde_json::Value;
+use clap::Parser;
 use tabled::Tabled;
+use crate::db::AircraftDB;
 
 use crate::geo::harversine_distance;
 
@@ -42,6 +44,21 @@ pub struct AirplanesLiveResponse {
     pub ac: Option<Vec<Aircraft>>, // Option, in case there are no planes available for some reason
 }
 
+// Helper function for dirty data:
+fn parse_altitude<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // Read the field as a generic JSON Value
+    let v = Value::deserialize(deserializer)?;
+
+    match v {
+        Value::Number(n) => Ok(n.as_f64()), // if it's a number, take that
+        Value::String(s) if s == "ground" => Ok(Some(0.0)), // if it says "ground", turn it into 0.0
+        _ => Ok(None), // everything else turns into None
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Aircraft {
     #[serde(rename = "hex")]
@@ -54,9 +71,9 @@ pub struct Aircraft {
     pub registration: Option<String>,
     #[serde(rename = "gs")]
     pub ground_speed: Option<f64>, // ground speed in knots
-    #[serde(rename = "alt_baro")]
+    #[serde(rename = "alt_baro", deserialize_with = "parse_altitude", default)]
     pub alt_baro: Option<f64>, // height in feet
-    #[serde(rename = "alt_geom")]
+    #[serde(rename = "alt_geom", deserialize_with = "parse_altitude", default)]
     pub alt_geom: Option<f64>, // GPS height in feet
     #[serde(rename = "type")]
     pub source_type: String, // "adsb", "mlat" <-- This is the Ghost detector
@@ -74,6 +91,8 @@ pub struct DefenseDisplay {
     icao: String,
     #[tabled(rename = "Type")]
     type_code: String,
+    #[tabled(rename = "Operator")]
+    operator: String,
     callsign: String,
     #[tabled(rename = "Speed (kt)")]
     speed: f64,
@@ -81,8 +100,6 @@ pub struct DefenseDisplay {
     alt: f64,
     #[tabled(rename = "Source")]
     source: String, // MLAT or ADS-B
-    #[tabled(rename = "Mil")]
-    is_mil: bool, // intelligence flag
     #[tabled(rename = "Reason")]
     reason: String,
 }
@@ -93,6 +110,7 @@ impl Aircraft {
         let mut reasons = Vec::new();
         let speed = self.ground_speed.unwrap_or(0.0);
         let alt = self.alt_baro.unwrap_or(0.0);
+        let type_code = self.type_code.clone().unwrap_or_default();
 
         // 1. Hard Filter:
         if let Some(max) = args.max_alt {
@@ -100,21 +118,30 @@ impl Aircraft {
         }
 
         // 2. Intelligence Triggers:
-        // A. Speed:
-        if speed > args.speed {
-            reasons.push(format!("High Speed ({:.0} kts)", speed));
+        // A. Speed and Altitude:
+        if (alt < 25000.0 && speed > args.speed) || speed > 550.0 {
+            reasons.push(format!("Speed ({:.0} kts @ {:.0} ft)", speed, alt));
         }
 
         // B. MLAT Detection (Ghost Tracking)
+        // List of boring small planes we want to ignore:
+        let boring_types = vec!["C172", "C152", "P28A", "DA40", "R44", "G115"];
+
         if self.source_type == "mlat" {
-            // for now, simply flag it as mlat source:
-            reasons.push("MLAT as source".to_string());
+            if !boring_types.contains(&type_code.as_str()) {
+                // for now, simply flag it as mlat source:
+                reasons.push("MLAT as source".to_string());
+            }
         }
 
-        // C. Must Watch Type / High Value Target
+        // C. High Value Target (HVT)
         if let Some(t) = &self.type_code {
             // default list:
-            let high_value = vec!["K35R", "A332", "E3TF", "C17", "A400"];
+            let high_value = vec![
+                "K35R", "K46", "A332", "E3TF", "C17", "A400", // Tanker/Transport
+                "B52", "B1", "B2", // Bomber
+                "EUFI", "F35", "F16", "F18", "TORN" // Fighter
+            ];
             if high_value.contains(&t.as_str()) {
                 reasons.push(format!("HVT: {}", t));
             }
@@ -141,15 +168,22 @@ impl Aircraft {
 }
 
 impl DefenseDisplay {
-    pub fn new(a: &Aircraft, reason: String) -> Self {
+    pub fn new(a: &Aircraft, reason: String, db: &AircraftDB) -> Self {
+        // Operator Lookup:
+        let operator = if let Some(info) = db.get(&a.icao) {
+            info.operator.clone().unwrap_or("Unknown".to_string())
+        } else {
+            "Unknown".to_string()
+        };
+
         Self {
             icao: a.icao.clone(),
             type_code: a.type_code.clone().unwrap_or("???".to_string()),
+            operator,
             callsign: a.callsign.clone().unwrap_or("".to_string()),
             speed: a.ground_speed.unwrap_or(0.0),
             alt: a.alt_baro.unwrap_or(0.0),
             source: a.source_type.clone(),
-            is_mil: a.is_military.unwrap_or(false),
             reason,
         }
     }

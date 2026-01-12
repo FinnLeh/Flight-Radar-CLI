@@ -4,6 +4,7 @@ use tabled::settings::Style;
 
 mod geo;
 mod models;
+mod db;
 
 use models::{Args, AirplanesLiveResponse, DefenseDisplay};
 
@@ -11,6 +12,11 @@ use models::{Args, AirplanesLiveResponse, DefenseDisplay};
 async fn main() -> Result<(), Box<dyn Error>> {
     // Parse arguments:
     let args = Args::parse();
+
+    // load DB:
+    println!("Loading Aircraft Database...");
+    let db = db::load_database()?;
+    println!("Loaded DB.");
 
     // HTTP Request:
     let client = reqwest::Client::new();
@@ -37,7 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .filter_map(|ac| {
             // Check the plane:
             match ac.check_interest(&args) {
-                Some(reason) => Some(DefenseDisplay::new(ac, reason)), // Hit! Return values plus Reason
+                Some(reason) => Some(DefenseDisplay::new(ac, reason, &db)), // Hit! Return values plus Reason
                 None => None,
             }
         })
