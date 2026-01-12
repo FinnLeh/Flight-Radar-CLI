@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <kml xmlns="http://www.opengis.net/kml/2.2">
+    <Document>
+        <name>Flight Radar Intelligence</name>
+        <Style id="style_mil">
+            <IconStyle>
+                <color>ff0000ff</color> <scale>1.2</scale>
+                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/airports.png</href></Icon>
+            </IconStyle>
+        </Style>
+        <Style id="style_warn">
+            <IconStyle>
+                <color>ff00ffff</color> <scale>1.0</scale>
+                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/caution.png</href></Icon>
+            </IconStyle>
+        </Style>
+        <Style id="style_norm">
+            <IconStyle>
+                <color>ffffffff</color> <scale>0.8</scale>
+                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/airports.png</href></Icon>
+            </IconStyle>
+        </Style>
+    
+            <Placemark>
+                <name>4bb2a1</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> A21N<br/><b>Callsign:</b> TKJ205  <br/><b>Speed:</b> 466 kts<br/><b>Alt:</b> 33000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 800ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>30.839767,35.783112,10058.4</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>4caff8</name>
+                <description><![CDATA[<b>Operator:</b> Ryanair<br/><b>Type:</b> B38M<br/><b>Callsign:</b> RYR12AX <br/><b>Speed:</b> 454 kts<br/><b>Alt:</b> 35000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 800ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>30.869887,36.027242,10668</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>50848a</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B738<br/><b>Callsign:</b> SEU6252 <br/><b>Speed:</b> 438 kts<br/><b>Alt:</b> 36000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 600ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>30.874833,34.883789,10972.800000000001</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>4bb2aa</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> A21N<br/><b>Callsign:</b> TKJ9JV  <br/><b>Speed:</b> 451 kts<br/><b>Alt:</b> 36950 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 550ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>30.876961,34.848121,11262.36</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>7114f2</name>
+                <description><![CDATA[<b>Operator:</b> Saudia<br/><b>Type:</b> A21N<br/><b>Callsign:</b> SVA260  <br/><b>Speed:</b> 470 kts<br/><b>Alt:</b> 33025 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 600ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>30.89759,34.326782,10066.02</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>4b8213</name>
+                <description><![CDATA[<b>Operator:</b> Turkish Air Force<br/><b>Type:</b> A400<br/><b>Callsign:</b> TUAF700 <br/><b>Speed:</b> 409 kts<br/><b>Alt:</b> 30975 ft<br/><b>Reason:</b> HVT: A400]]></description>
+                <styleUrl>#style_mil</styleUrl>
+                <Point>
+                    <coordinates>31.021859,32.455103,9441.18</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>738065</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B738<br/><b>Callsign:</b> ELY328  <br/><b>Speed:</b> 519 kts<br/><b>Alt:</b> 37000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 525ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>31.275444,34.370588,11277.6</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>06a3b6</name>
+                <description><![CDATA[<b>Operator:</b> Qatar Airways<br/><b>Type:</b> B77L<br/><b>Callsign:</b> QTR4Q   <br/><b>Speed:</b> 549 kts<br/><b>Alt:</b> 37000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 325ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>31.457669,33.286247,11277.6</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>738072</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B772<br/><b>Callsign:</b> ELY210  <br/><b>Speed:</b> 553 kts<br/><b>Alt:</b> 39000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 375ft), Speed (553 kts @ 39000 ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>31.500157,33.985703,11887.2</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>06a080</name>
+                <description><![CDATA[<b>Operator:</b> Qatar Airways Cargo<br/><b>Type:</b> B77L<br/><b>Callsign:</b> QTR8173 <br/><b>Speed:</b> 560 kts<br/><b>Alt:</b> 35000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 375ft), Speed (560 kts @ 35000 ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>31.529921,33.010704,10668</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>738053</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B739<br/><b>Callsign:</b> ELY572  <br/><b>Speed:</b> 488 kts<br/><b>Alt:</b> 35000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 725ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>31.575116,35.27277,10668</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>a0a54d</name>
+                <description><![CDATA[<b>Operator:</b> United Airlines<br/><b>Type:</b> B78X<br/><b>Callsign:</b> UAL91   <br/><b>Speed:</b> 440 kts<br/><b>Alt:</b> 31975 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 625ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>31.642113,34.294754,9745.980000000001</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>406b0a</name>
+                <description><![CDATA[<b>Operator:</b> British Airways<br/><b>Type:</b> B77W<br/><b>Callsign:</b> BAW61   <br/><b>Speed:</b> 560 kts<br/><b>Alt:</b> 35000 ft<br/><b>Reason:</b> Speed (560 kts @ 35000 ft)]]></description>
+                <styleUrl>#style_norm</styleUrl>
+                <Point>
+                    <coordinates>32.141288,32.587823,10668</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>738059</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B738<br/><b>Callsign:</b> ELY2368 <br/><b>Speed:</b> 524 kts<br/><b>Alt:</b> 35025 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 500ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>32.20586,33.782684,10675.62</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>424b40</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> GLEX<br/><b>Callsign:</b> MOONL   <br/><b>Speed:</b> 543 kts<br/><b>Alt:</b> 35100 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 400ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>32.62099,33.379898,10698.480000000001</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>503d62</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B738<br/><b>Callsign:</b> ELY5110 <br/><b>Speed:</b> 417 kts<br/><b>Alt:</b> 35000 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 625ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>33.878473,34.995941,10668</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>440604</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> A320<br/><b>Callsign:</b> AUA83   <br/><b>Speed:</b> 364 kts<br/><b>Alt:</b> 13900 ft<br/><b>Reason:</b> Speed (364 kts @ 13900 ft)]]></description>
+                <styleUrl>#style_norm</styleUrl>
+                <Point>
+                    <coordinates>34.003674,32.569656,4236.72</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>3c65cc</name>
+                <description><![CDATA[<b>Operator:</b> Lufthansa<br/><b>Type:</b> A20N<br/><b>Callsign:</b> DLH682  <br/><b>Speed:</b> 307 kts<br/><b>Alt:</b> 6375 ft<br/><b>Reason:</b> Speed (307 kts @ 6375 ft)]]></description>
+                <styleUrl>#style_norm</styleUrl>
+                <Point>
+                    <coordinates>34.344965,32.387466,1943.1000000000001</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>14fc25</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> T204<br/><b>Callsign:</b> RWZ015  <br/><b>Speed:</b> 307 kts<br/><b>Alt:</b> 6525 ft<br/><b>Reason:</b> Speed (307 kts @ 6525 ft)]]></description>
+                <styleUrl>#style_norm</styleUrl>
+                <Point>
+                    <coordinates>34.645946,32.306508,1988.8200000000002</coordinates>
+                </Point>
+            </Placemark>
+            <Placemark>
+                <name>4242f4</name>
+                <description><![CDATA[<b>Operator:</b> Unknown<br/><b>Type:</b> B788<br/><b>Callsign:</b> AHY322  <br/><b>Speed:</b> 478 kts<br/><b>Alt:</b> 33150 ft<br/><b>Reason:</b> NAV ANOMALY (Δ 325ft)]]></description>
+                <styleUrl>#style_warn</styleUrl>
+                <Point>
+                    <coordinates>34.810069,33.085513,10104.12</coordinates>
+                </Point>
+            </Placemark>
+</Document>
+</kml>

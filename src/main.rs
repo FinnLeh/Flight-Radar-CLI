@@ -5,6 +5,7 @@ use tabled::settings::Style;
 mod geo;
 mod models;
 mod db;
+mod kml;
 
 use models::{Args, AirplanesLiveResponse, DefenseDisplay};
 
@@ -72,6 +73,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("No relevant targets found.");
     } else {
         println!("{} High Value / Anomalies detected:", anomalies.len());
+
+        if args.kml && !anomalies.is_empty() {
+            println!("Generating KML File...");
+            let filename = "intelligence.kml";
+            match kml::save_kml(filename, &anomalies) {
+                Ok(_) => println!("Success! File '{}' created. Open it in Google Earth.", filename),
+                Err(e) => eprintln!("Error while writing KML: {}", e),
+            }
+        }
+
         let mut table = tabled::Table::new(anomalies);
         table.with(Style::modern());
         println!("{}", table);

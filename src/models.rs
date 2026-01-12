@@ -48,6 +48,10 @@ pub struct Args {
     /// Maximum height in meters (for example, to find low flights)
     #[arg(long)]
     pub max_alt: Option<f64>,
+
+    /// KML Creation for better reading of results
+    #[arg(long)]
+    pub kml: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,22 +103,26 @@ pub struct Aircraft {
 
 #[derive(Tabled)]
 pub struct DefenseDisplay {
-    icao: String,
+    pub(crate) icao: String,
     #[tabled(rename = "Type")]
-    type_code: String,
+    pub(crate) type_code: String,
     #[tabled(rename = "Operator")]
-    operator: String,
-    callsign: String,
+    pub(crate) operator: String,
+    pub(crate) callsign: String,
     #[tabled(rename = "Speed (kt)")]
-    speed: f64,
+    pub(crate) speed: f64,
     #[tabled(rename = "Alt (ft)")]
-    alt: f64,
+    pub(crate) alt: f64,
     #[tabled(rename = "Nav Delta")]
     delta: String,
     #[tabled(rename = "Source")]
     source: String, // MLAT or ADS-B
     #[tabled(rename = "Reason")]
-    reason: String,
+    pub reason: String,
+    #[tabled(skip)]
+    pub lat: f64,
+    #[tabled(skip)]
+    pub lon: f64,
 }
 
 impl Aircraft {
@@ -206,6 +214,7 @@ fn resolve_operator_by_callsign(callsign: &str) -> Option<String> {
     if cs.starts_with("FAF") { return Some("French Air Force".to_string()); }
     if cs.starts_with("SUI") { return Some("Swiss Air Force".to_string()); }
     if cs.starts_with("TUAF") { return Some("Turkish Air Force".to_string()); }
+    if cs.starts_with("HVK") { return Some("Turkish Air Force".to_string()); }  // (Hava Kuvvetleri)
 
     // Civil Airlines:
     if cs.starts_with("DLH") { return Some("Lufthansa".to_string()); }
@@ -218,6 +227,7 @@ fn resolve_operator_by_callsign(callsign: &str) -> Option<String> {
     if cs.starts_with("SVA") { return Some("Saudia".to_string()); }
     if cs.starts_with("UAE") { return Some("Emirates".to_string()); }
     if cs.starts_with("QTR") { return Some("Qatar Airways".to_string()); }
+    if cs.starts_with("THY") { return Some("Turkish Airlines".to_string()); }
 
     None
 }
@@ -258,6 +268,8 @@ impl DefenseDisplay {
             delta: delta_str,
             source: a.source_type.clone(),
             reason,
+            lat: a.lat.unwrap_or(0.0),
+            lon: a.lon.unwrap_or(0.0),
         }
     }
 }
