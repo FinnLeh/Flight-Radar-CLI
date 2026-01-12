@@ -1,13 +1,16 @@
 use std::error::Error;
 use clap::Parser;
 use tabled::settings::Style;
+use std::{thread, time};
+use warp::Filter;
+use models::{Args, AirplanesLiveResponse, DefenseDisplay};
+use std::sync::{Arc, Mutex};
 
 mod geo;
 mod models;
 mod db;
 mod kml;
 
-use models::{Args, AirplanesLiveResponse, DefenseDisplay};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -38,6 +41,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let lat = args.lat.unwrap();
     let lon = args.lon.unwrap();
 
+    // Shared State:
+    // Arc: Allows multiple owners access.
+    // Mutex: Ensures that only one is writing at any time.
+    let shared_anomalies = Arc::new(Mutex::new(Vec::<DefenseDisplay>::new()));
+
+    // If KML is active in args, create the network link:
+    if args.kml {
+        println!("Starting KML Server at http://127.0.0.1:3030/kml ...");
+
+        let server_data = shared_anomalies.clone();
+
+        // Define Route:
+        let kml_route = warp::path("kml")
+            .map(move || {
+                let planes = server_data.lock().unwrap();
+                let kml_string = kml::generate_kml_string(&planes);
+
+                warp::reply::with_header(
+                    kml_string,
+                    "Content-Type",
+                    "application/vnd.google-earth.kml+xml"
+                )
+            });
+
+        // Start server in the background (non-blocking)
+        tokio::spawn(async move {
+            warp::serve(kml_route).run(([127, 0, 0, 1], 3030)).await;
+        });
+
+        // Create Link File (pointing to localhost)
+        kml::create_network_link("radar_link.kml")?;
+    }
+
     // HTTP Request:
     let client = reqwest::Client::new();
     let url = format!(
@@ -45,49 +81,60 @@ async fn main() -> Result<(), Box<dyn Error>> {
         lat, lon, args.radius
     );
 
-    println!("Scanning Sector...");
-    println!("Target: High Speed > {} kts, or HVT", args.speed);
+    // Endless loop:
+    loop {
+        // empty screen (ANSI escape code):
+        print!("\x1B[2J\x1B[1;1H");
 
-    let resp = client.get(&url)
-        .send()
-        .await?
-        .json::<AirplanesLiveResponse>()
-        .await?;
+        println!(" --- LIVE RADAR SCAN --- ");
+        println!("Zeit: {:?}", chrono::Local::now().format("%H:%M:%S").to_string());
+        println!("Sektor: {:.4}, {:.4} | Radius: {}nm", lat, lon, args.radius);
 
-    // If "ac" is none (no aircrafts), return empty vector
-    let aircraft_list = resp.ac.unwrap_or_default();
-    println!("Parsed: {} Aircrafts in the Sector.", aircraft_list.len());
+        // send request:
+        match client.get(&url).send().await {
+            Ok(resp) => {
+                match resp.json::<AirplanesLiveResponse>().await {
+                    Ok(data) => {
+                        let aircraft_list = data.ac.unwrap_or_default();
 
-    // Filtering the anomalies:
-    let anomalies: Vec<DefenseDisplay> = aircraft_list.iter()
-        .filter_map(|ac| {
-            // Check the plane:
-            match ac.check_interest(&args) {
-                Some(reason) => Some(DefenseDisplay::new(ac, reason, &db)), // Hit! Return values plus Reason
-                None => None,
-            }
-        })
-        .collect();
+                        // Filter Map
+                        let anomalies: Vec<DefenseDisplay> = aircraft_list.iter()
+                            .filter_map(|ac| {
+                                // Check the plane:
+                                match ac.check_interest(&args) {
+                                    Some(reason) => Some(DefenseDisplay::new(ac, reason, &db)), // Hit! Return values plus Reason
+                                    None => None,
+                                }
+                            })
+                            .collect();
 
-    if anomalies.is_empty() {
-        println!("No relevant targets found.");
-    } else {
-        println!("{} High Value / Anomalies detected:", anomalies.len());
+                        // Update KML
+                        if args.kml {
+                            {
+                                let mut data = shared_anomalies.lock().unwrap();
+                                *data = anomalies.clone();
+                            }
+                        }
 
-        if args.kml && !anomalies.is_empty() {
-            println!("Generating KML File...");
-            let filename = "intelligence.kml";
-            match kml::save_kml(filename, &anomalies) {
-                Ok(_) => println!("Success! File '{}' created. Open it in Google Earth.", filename),
-                Err(e) => eprintln!("Error while writing KML: {}", e),
-            }
+                        if anomalies.is_empty() {
+                            println!("Status: No targets.");
+                        } else {
+                            println!("ALERT: {} targets found!", anomalies.len());
+
+                            // Show table
+                            let mut table = tabled::Table::new(anomalies);
+                            table.with(Style::modern());
+                            println!("{}", table);
+                        }
+                    },
+                    Err(e) => eprintln!("JSON Error: {}", e),
+                }
+            },
+            Err(e) => eprintln!("Connection Error: {}", e),
         }
 
-        let mut table = tabled::Table::new(anomalies);
-        table.with(Style::modern());
-        println!("{}", table);
+        println!("\nNext Scan in 10 seconds...");
+        thread::sleep(time::Duration::from_secs(10));
     }
-
-    Ok(())
 }
 

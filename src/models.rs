@@ -101,7 +101,7 @@ pub struct Aircraft {
     pub is_military: Option<bool>, // Airplanes.live often flags military aircrafts
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Clone)]
 pub struct DefenseDisplay {
     pub(crate) icao: String,
     #[tabled(rename = "Type")]

@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::fmt::format;
 use std::fs::File;
 use std::io::Write;
 use crate::models::DefenseDisplay;
@@ -67,5 +66,62 @@ pub fn save_kml(filename: &str, anomalies: &Vec<DefenseDisplay>) -> Result<(), B
     }
 
     file.write_all(b"\n</Document>\n</kml>")?;
+    Ok(())
+}
+
+pub fn generate_kml_string(anomalies: &Vec<DefenseDisplay>) -> String {
+    let mut output = String::from(get_header());
+
+    for plane in anomalies {
+        // for now, just copied the style logic in here:
+        let style = if plane.reason.contains("HVT") || plane.reason.contains("MIL") {
+            "#style_mil"
+        } else if plane.reason.contains("NAV") {
+            "#style_warn"
+        } else {
+            "#style_norm"
+        };
+
+        let description = format!(
+            "<b>Operator:</b> {}<br/><b>Type:</b> {}<br/><b>Callsign:</b> {}<br/><b>Speed:</b> {:.0} kts<br/><b>Alt:</b> {:.0} ft<br/><b>Reason:</b> {}",
+            plane.operator, plane.type_code, plane.callsign, plane.speed, plane.alt, plane.reason
+        );
+
+        let kml_placemark = format!(
+            r#"
+    <Placemark>
+        <name>{}</name>
+        <description><![CDATA[{}]]></description>
+        <styleUrl>{}</styleUrl>
+        <Point>
+            <coordinates>{},{},{}</coordinates>
+        </Point>
+    </Placemark>"#,
+            plane.icao, description, style, plane.lon, plane.lat, plane.alt * 0.3048
+        );
+
+        output.push_str(&kml_placemark);
+    }
+
+    output.push_str("\n</Document>\n</kml>");
+    output
+}
+
+/// Creates a Link file that tells google earth to load intelligence.kml new every couple seconds:
+pub fn create_network_link(filename: &str) -> Result<(), Box<dyn Error>> {
+    let content = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <kml xmlns="http://www.opengis.net/kml/2.2">
+        <NetworkLink>
+            <name>Flight Radar Live Feed</name>
+            <open>1</open>
+            <Link>
+                <href>http://127.0.0.1:3030/kml</href> <refreshMode>onInterval</refreshMode>
+                <refreshInterval>5</refreshInterval>
+            </Link>
+        </NetworkLink>
+    </kml>
+    "#;
+    let mut file = File::create(filename)?;
+    file.write_all(content.as_bytes())?;
     Ok(())
 }
