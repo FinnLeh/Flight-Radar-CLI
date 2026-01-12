@@ -26,8 +26,44 @@ pub fn harversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     EARTH_RADIUS_KM * c
 }
 
+// Static Database to reduce Nominatim API usage:
+fn get_static_coords(query: &str) -> Option<(f64, f64)> {
+    // normalize input (everything lowercase)
+    match query.to_lowercase().as_str() {
+        "london" => Some((51.5074, -0.1278)),
+        "mildenhall" => Some((52.3467, 0.4795)), // RAF Mildenhall
+        "lakenheath" => Some((52.4093, 0.5606)), // RAF Lakenheath
+
+        // Deutschland
+        "berlin" => Some((52.5200, 13.4050)),
+        "ramstein" | "ramstein air base" => Some((49.4365, 7.6003)),
+        "spangdahlem" => Some((49.9745, 6.6923)),
+        "geilenkirchen" => Some((50.9602, 6.0469)), // AWACS Basis
+
+        // USA
+        "washington" | "dc" => Some((38.9072, -77.0369)),
+        "groom lake" | "area 51" => Some((37.2343, -115.8067)),
+        "edwards afb" => Some((34.9056, -117.8837)),
+        "norfolk" => Some((36.8508, -76.2859)), // Naval Station
+
+        // Hotspots
+        "kyiv" | "kiew" => Some((50.4501, 30.5234)),
+        "tel aviv" => Some((32.0853, 34.7818)),
+        "taipei" => Some((25.0330, 121.5654)),
+        "kaliningrad" => Some((54.7104, 20.4522)),
+
+        _ => None, // Nicht gefunden
+    }
+}
+
 /// Asks OpenStreetMaps for the Coords of a location
 pub async fn resolve_location(query: &str) -> Result<(f64, f64), Box<dyn Error>> {
+    // Look into internal static database for locations first:
+    if let Some(coords) = get_static_coords(query) {
+        println!("(Offline-Cache used for '{}')", query);
+        return Ok(coords);
+    }
+
     let client = reqwest::Client::new();
 
     // URL for Nominatim Search
