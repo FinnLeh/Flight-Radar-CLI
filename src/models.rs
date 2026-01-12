@@ -33,6 +33,10 @@ pub struct Args {
     #[arg(long)]
     pub lon: Option<f64>,
 
+    /// Threshold for Navigation Warning (Spoof Delta, Baro vs Geo Difference in ft)
+    #[arg(long, default_value_t = 1000.0)]
+    pub spoof_delta: f64,
+
     /// Radius around the target in nautical miles
     #[arg(short, long, default_value_t = 250.0)]
     pub radius: f64,
@@ -105,6 +109,8 @@ pub struct DefenseDisplay {
     speed: f64,
     #[tabled(rename = "Alt (ft)")]
     alt: f64,
+    #[tabled(rename = "Nav Delta")]
+    delta: String,
     #[tabled(rename = "Source")]
     source: String, // MLAT or ADS-B
     #[tabled(rename = "Reason")]
@@ -122,6 +128,17 @@ impl Aircraft {
         // 1. Hard Filter:
         if let Some(max) = args.max_alt {
             if alt > max { return None; }
+        }
+
+        // Spoofing / Jamming Check:
+        if let (Some(baro), Some(geom)) = (self.alt_baro, self.alt_geom) {
+            // Calculate absolute Difference:
+            let delta = (baro - geom).abs();
+
+            // If difference is larger than threshold: Alert
+            if delta > args.spoof_delta {
+                reasons.push(format!("NAV ANOMALY (Δ {:.0}ft)", delta));
+            }
         }
 
         // 2. Intelligence Triggers:
@@ -188,6 +205,7 @@ fn resolve_operator_by_callsign(callsign: &str) -> Option<String> {
     if cs.starts_with("IAM") { return Some("Italian Air Force".to_string()); }
     if cs.starts_with("FAF") { return Some("French Air Force".to_string()); }
     if cs.starts_with("SUI") { return Some("Swiss Air Force".to_string()); }
+    if cs.starts_with("TUAF") { return Some("Turkish Air Force".to_string()); }
 
     // Civil Airlines:
     if cs.starts_with("DLH") { return Some("Lufthansa".to_string()); }
@@ -222,6 +240,14 @@ impl DefenseDisplay {
             }
         }
 
+        // Calculate delta:
+        let delta_str = if let (Some(baro), Some(geom)) = (a.alt_baro, a.alt_geom) {
+            let diff = (baro - geom).abs();
+            format!("{:.0}", diff)
+        } else {
+            "-".to_string() // Data is missing, no comparison possible
+        };
+
         Self {
             icao: a.icao.clone(),
             type_code: a.type_code.clone().unwrap_or("???".to_string()),
@@ -229,6 +255,7 @@ impl DefenseDisplay {
             callsign,
             speed: a.ground_speed.unwrap_or(0.0),
             alt: a.alt_baro.unwrap_or(0.0),
+            delta: delta_str,
             source: a.source_type.clone(),
             reason,
         }
