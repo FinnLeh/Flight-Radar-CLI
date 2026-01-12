@@ -1,6 +1,4 @@
-use std::ffi::CString;
-use serde::Deserialize;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 use clap::{Arg, Parser};
 use tabled::Tabled;
 
@@ -14,20 +12,20 @@ pub struct Args {
     #[arg(short, long, default_value_t = 300.0)]
     pub speed: f64,
 
-    /// Country that you want to search for
-    #[arg(short, long, default_value = "Russian Federation")]
-    pub country: String,
+    /// Filter for Aircraft Type Code (e.g., "K35R")
+    #[arg(short, long)]
+    pub aircraft_type: Option<String>,
 
     /// Latitude of the target
     #[arg(long)]
-    pub lat: Option<f64>,
+    pub lat: f64,
 
     /// Longitude of the target
     #[arg(long)]
-    pub lon: Option<f64>,
+    pub lon: f64,
 
-    /// Radius around the target in km
-    #[arg(short, long, default_value_t = 100.0)]
+    /// Radius around the target in nautical miles
+    #[arg(short, long, default_value_t = 250.0)]
     pub radius: f64,
 
     /// Minimum height in meters (for example for Drone Finding)
@@ -40,138 +38,118 @@ pub struct Args {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct OpenSkyResponse {
-    pub time: i64,
-    pub states: Vec<Vec<Value>>,
+pub struct AirplanesLiveResponse {
+    pub ac: Option<Vec<Aircraft>>, // Option, in case there are no planes available for some reason
 }
 
-#[derive(Debug)]
-pub struct StateVector {
-    pub icao24: String,
-    pub callsign: String,
-    pub origin_country: String,
-    pub longitude: Option<f64>,
-    pub latitude: Option<f64>,
-    pub on_ground: bool,
-    pub velocity: Option<f64>,
-    pub geo_altitude: Option<f64>,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Aircraft {
+    #[serde(rename = "hex")]
+    pub icao: String,
+    #[serde(rename = "flight")]
+    pub callsign: Option<String>, // often empty for military planes
+    #[serde(rename = "t")]
+    pub type_code: Option<String>,
+    #[serde(rename = "r")]
+    pub registration: Option<String>,
+    #[serde(rename = "gs")]
+    pub ground_speed: Option<f64>, // ground speed in knots
+    #[serde(rename = "alt_baro")]
+    pub alt_baro: Option<f64>, // height in feet
+    #[serde(rename = "alt_geom")]
+    pub alt_geom: Option<f64>, // GPS height in feet
+    #[serde(rename = "type")]
+    pub source_type: String, // "adsb", "mlat" <-- This is the Ghost detector
+
+    // may be missing:
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
+
+    #[serde(rename = "mil")]
+    pub is_military: Option<bool>, // Airplanes.live often flags military aircrafts
 }
 
-impl StateVector {
-    pub fn from_values(values: &Vec<Value>) -> Option<Self> {
-        // If there is less than 10 values, the array is broken and not usable
-        if values.len() < 10 {
-            return None;
-        }
+#[derive(Tabled)]
+pub struct DefenseDisplay {
+    icao: String,
+    #[tabled(rename = "Type")]
+    type_code: String,
+    callsign: String,
+    #[tabled(rename = "Speed (kt)")]
+    speed: f64,
+    #[tabled(rename = "Alt (ft)")]
+    alt: f64,
+    #[tabled(rename = "Source")]
+    source: String, // MLAT or ADS-B
+    #[tabled(rename = "Mil")]
+    is_mil: bool, // intelligence flag
+    #[tabled(rename = "Reason")]
+    reason: String,
+}
 
-        // Map based on indices.
-        // .as_str() returns Option<&str>.
-        // .to_string() makes it a real String (Deep Copy/Heap allocation).
-        // unwrap_or() takes a specified String, if it was Null.
-        let icao24 = values[0].as_str().unwrap_or("").to_string();
-        let callsign = values[1].as_str().unwrap_or("").to_string();
-        let origin_country = values[2].as_str().unwrap_or("").to_string();
-
-        // Numbers: .as_f64() returns Option<f64> (i.e., either the value or None if Null).
-        let longitude = values[5].as_f64();
-        let latitude = values[6].as_f64();
-        let on_ground = values[8].as_bool().unwrap_or(false);
-        let velocity = values[9].as_f64();
-        let geo_altitude = values[13].as_f64().or(values[7].as_f64());
-
-        // Returning a StateVector if all values are there, or None otherwise
-        Some(StateVector {
-            icao24,
-            callsign,
-            origin_country,
-            longitude,
-            latitude,
-            on_ground,
-            velocity,
-            geo_altitude,
-        })
-    }
-
-    pub fn check_anomalies(&self, args: &Args) -> Option<String> {
-        let speed = self.velocity.unwrap_or(0.0);
-        let alt = self.geo_altitude.unwrap_or(0.0);
+impl Aircraft {
+    // Intelligence Logic:
+    pub fn check_interest(&self, args: &Args) -> Option<String> {
         let mut reasons = Vec::new();
+        let speed = self.ground_speed.unwrap_or(0.0);
+        let alt = self.alt_baro.unwrap_or(0.0);
 
-        // Hard Filter: Ignore any flights outside the height boundaries:
-        if let Some(min) = args.min_alt {
-            if alt < min { return None; } // below the min height
-        }
-        // If max_alt is set, check it:
+        // 1. Hard Filter:
         if let Some(max) = args.max_alt {
-            if alt > max { return None; } // above the max height
+            if alt > max { return None; }
         }
 
-        // Trigger 1: Speed.
+        // 2. Intelligence Triggers:
+        // A. Speed:
         if speed > args.speed {
-            reasons.push(format!("Speed ({:.0} > {})", speed, args.speed));
+            reasons.push(format!("High Speed ({:.0} kts)", speed));
         }
 
-        // Trigger 2: Origin Country
-        // E.g., Russia:
-        if self.origin_country == args.country {
-            reasons.push("Country".to_string());
+        // B. MLAT Detection (Ghost Tracking)
+        if self.source_type == "mlat" {
+            // for now, simply flag it as mlat source:
+            reasons.push("MLAT as source".to_string());
         }
 
-        // Trigger 3: Geofence
-        if let (Some(target_lat), Some(target_lon)) = (args.lat, args.lon) {
-            // Check if the flight has coords for us to calculate with:
-            if let (Some(plane_lat), Some(plane_lon)) = (self.latitude, self.longitude) {
-                let distance = harversine_distance(target_lat, target_lon, plane_lat, plane_lon);
+        // C. Must Watch Type / High Value Target
+        if let Some(t) = &self.type_code {
+            // default list:
+            let high_value = vec!["K35R", "A332", "E3TF", "C17", "A400"];
+            if high_value.contains(&t.as_str()) {
+                reasons.push(format!("HVT: {}", t));
+            }
 
-                if distance < args.radius {
-                    reasons.push(format!("Geofence ({:.1}km)", distance));
+            // if user searched explicit types:
+            if let Some(target_type) = &args.aircraft_type {
+                if t.contains(target_type) {
+                    reasons.push("Target Type Match".to_string());
                 }
             }
         }
 
+        // D. Explicit military flag from API
+        if self.is_military.unwrap_or(false) {
+            reasons.push("MIL FLAG".to_string());
+        }
+
         if reasons.is_empty() {
-            None // No anomaly
+            None
         } else {
             Some(reasons.join(", "))
         }
     }
 }
 
-#[derive(Tabled)]
-pub struct AnomalyDisplay {
-    icao: String,
-    callsign: String,
-    country: String,
-    #[tabled(rename = "Velocity (m/s)")]
-    velocity: f64,
-    #[tabled(rename = "Alt (m)")]
-    altitude: f64,
-    #[tabled(rename = "Dist (km)")]
-    distance: String, // String, so that it can display N/A if no target specified
-    #[tabled(rename = "On Ground")]
-    on_ground: bool,
-    #[tabled(rename = "Reason")]
-    reason: String,
-}
-
-impl AnomalyDisplay {
-    pub fn new(s: &StateVector, args: &Args, reason: String) -> Self {
-        let dist_str = if let (Some(lat), Some(lon), Some(p_lat), Some(p_lon))
-            = (args.lat, args.lon, s.latitude, s.longitude) {
-            let d = harversine_distance(lat, lon, p_lat, p_lon);
-            format!("{:.1}", d)
-        } else {
-            "N/A".to_string()
-        };
-
+impl DefenseDisplay {
+    pub fn new(a: &Aircraft, reason: String) -> Self {
         Self {
-            icao: s.icao24.clone(),
-            callsign: s.callsign.clone(),
-            country: s.origin_country.clone(),
-            velocity: s.velocity.unwrap_or(0.0),
-            altitude: s.geo_altitude.unwrap_or(0.0),
-            distance: dist_str,
-            on_ground: s.on_ground,
+            icao: a.icao.clone(),
+            type_code: a.type_code.clone().unwrap_or("???".to_string()),
+            callsign: a.callsign.clone().unwrap_or("".to_string()),
+            speed: a.ground_speed.unwrap_or(0.0),
+            alt: a.alt_baro.unwrap_or(0.0),
+            source: a.source_type.clone(),
+            is_mil: a.is_military.unwrap_or(false),
             reason,
         }
     }
