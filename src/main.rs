@@ -11,21 +11,40 @@ use models::{Args, AirplanesLiveResponse, DefenseDisplay};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Parse arguments:
-    let args = Args::parse();
+    let mut args = Args::parse();
 
     // load DB:
     println!("Loading Aircraft Database...");
     let db = db::load_database()?;
     println!("Loaded DB.");
 
+    // Resolve Location:
+    if let Some(loc) = &args.location {
+        println!("Resolving location: '{}'...", loc);
+        let (lat, lon) = geo::resolve_location(loc).await?;
+        println!("--> Found coordinates: {:.4}, {:.4}", lat, lon);
+
+        // put found values in args:
+        args.lat = Some(lat);
+        args.lon = Some(lon);
+    }
+
+    if args.lat.is_none() || args.lon.is_none() {
+        eprintln!("Error: Please specify --location or --lat/--lon");
+        return Ok(());
+    }
+
+    let lat = args.lat.unwrap();
+    let lon = args.lon.unwrap();
+
     // HTTP Request:
     let client = reqwest::Client::new();
     let url = format!(
         "https://api.airplanes.live/v2/point/{}/{}/{}",
-        args.lat, args.lon, args.radius
+        lat, lon, args.radius
     );
 
-    println!("Scanning airspace at {}, {} (Radius {} nm)...", args.lat, args.lon, args.radius);
+    println!("Scanning Sector...");
     println!("Target: High Speed > {} kts, or HVT", args.speed);
 
     let resp = client.get(&url)

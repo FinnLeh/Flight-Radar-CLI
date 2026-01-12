@@ -1,14 +1,19 @@
+use std::iter::Copied;
 use serde::{Deserialize, Serialize, Deserializer};
 use serde_json::Value;
 use clap::Parser;
 use tabled::Tabled;
 use crate::db::AircraftDB;
 
-use crate::geo::harversine_distance;
 
 /// A simple CLI tool to scan OpenSky Data for Anomalies.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
+#[command(group(
+    clap::ArgGroup::new("coords")
+        .required(true)
+        .args(&["location", "lat"])
+))]
 pub struct Args {
     /// Speed Limit in m/s
     #[arg(short, long, default_value_t = 300.0)]
@@ -18,13 +23,17 @@ pub struct Args {
     #[arg(short, long)]
     pub aircraft_type: Option<String>,
 
-    /// Latitude of the target
-    #[arg(long)]
-    pub lat: f64,
+    /// Name of the target location (e.g., "London")
+    #[arg(short = 'L', long)]
+    pub location: Option<String>,
 
-    /// Longitude of the target
+    /// Latitude of the target (will be ignored if location is set)
     #[arg(long)]
-    pub lon: f64,
+    pub lat: Option<f64>,
+
+    /// Longitude of the target (will be ignored if location is set)
+    #[arg(long)]
+    pub lon: Option<f64>,
 
     /// Radius around the target in nautical miles
     #[arg(short, long, default_value_t = 250.0)]
