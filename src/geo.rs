@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::fmt::format;
 use serde::Deserialize;
 use reqwest::header::USER_AGENT;
 
@@ -10,9 +9,10 @@ struct NominatimResponse {
     lon: String,
 }
 
+ /*
 /// Calculates the Distance between two coords in km.
 /// Uses the Haversine Formula for spherical Geometry.
-pub fn harversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     const EARTH_RADIUS_KM: f64 = 6371.0;
 
     let d_lat = (lat2 - lat1).to_radians();
@@ -25,7 +25,10 @@ pub fn harversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 
     EARTH_RADIUS_KM * c
 }
+ */
 
+
+// TODO: Make the list extendable by creating a locations.toml instead of the way it currently works. Then users can add their own locations that they want to locally save.
 // Static Database to reduce Nominatim API usage:
 fn get_static_coords(query: &str) -> Option<(f64, f64)> {
     // normalize input (everything lowercase)

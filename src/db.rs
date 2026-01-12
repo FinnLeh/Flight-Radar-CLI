@@ -9,11 +9,11 @@ pub struct AircraftInfo {
     #[serde(rename = "icao24")] // CSV Header name
     pub icao: String,
 
-    #[serde(rename = "manufacturername")]
-    pub manufacturer: Option<String>,
+    // #[serde(rename = "manufacturername")]
+    // pub manufacturer: Option<String>,
 
-    #[serde(rename = "model")]
-    pub model: Option<String>,
+    // #[serde(rename = "model")]
+    // pub model: Option<String>,
 
     #[serde(rename = "operator")]
     pub operator: Option<String>,

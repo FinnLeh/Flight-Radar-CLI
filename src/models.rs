@@ -1,10 +1,8 @@
-use std::iter::Copied;
 use serde::{Deserialize, Serialize, Deserializer};
 use serde_json::Value;
 use clap::Parser;
 use tabled::Tabled;
 use crate::db::AircraftDB;
-
 
 /// A simple CLI tool to scan OpenSky Data for Anomalies.
 #[derive(Parser, Debug)]
@@ -176,20 +174,59 @@ impl Aircraft {
     }
 }
 
+/// Try to guess the operator using the callsign:
+fn resolve_operator_by_callsign(callsign: &str) -> Option<String> {
+    let cs = callsign.to_uppercase();
+
+    // Military Callsign:
+    if cs.starts_with("RCH") { return Some("US Air Force (AMC)".to_string()); }
+    if cs.starts_with("RRR") { return Some("Royal Air Force".to_string()); }
+    if cs.starts_with("RRF") { return Some("Royal Air Force".to_string()); }
+    if cs.starts_with("NATO") { return Some("NATO E-3A Component".to_string()); }
+    if cs.starts_with("CNV") { return Some("US Navy".to_string()); }
+    if cs.starts_with("GAF") { return Some("German Air Force".to_string()); }
+    if cs.starts_with("IAM") { return Some("Italian Air Force".to_string()); }
+    if cs.starts_with("FAF") { return Some("French Air Force".to_string()); }
+    if cs.starts_with("SUI") { return Some("Swiss Air Force".to_string()); }
+
+    // Civil Airlines:
+    if cs.starts_with("DLH") { return Some("Lufthansa".to_string()); }
+    if cs.starts_with("RYR") { return Some("Ryanair".to_string()); }
+    if cs.starts_with("EZY") { return Some("EasyJet".to_string()); }
+    if cs.starts_with("BAW") { return Some("British Airways".to_string()); }
+    if cs.starts_with("AFR") { return Some("Air France".to_string()); }
+    if cs.starts_with("KLM") { return Some("KLM Royal Dutch Airlines".to_string()); }
+    if cs.starts_with("SAS") { return Some("Scandinavian Airlines".to_string()); }
+    if cs.starts_with("SVA") { return Some("Saudia".to_string()); }
+    if cs.starts_with("UAE") { return Some("Emirates".to_string()); }
+    if cs.starts_with("QTR") { return Some("Qatar Airways".to_string()); }
+
+    None
+}
+
 impl DefenseDisplay {
     pub fn new(a: &Aircraft, reason: String, db: &AircraftDB) -> Self {
-        // Operator Lookup:
-        let operator = if let Some(info) = db.get(&a.icao) {
+        let callsign = a.callsign.clone().unwrap_or("".to_string());
+
+        // Operator Lookup via DB:
+        let mut operator = if let Some(info) = db.get(&a.icao) {
             info.operator.clone().unwrap_or("Unknown".to_string())
         } else {
             "Unknown".to_string()
         };
 
+        // Try finding the operator via Callsign Intelligence if DB has failed:
+        if operator == "Unknown" || operator.is_empty() {
+            if let Some(guessed_op) = resolve_operator_by_callsign(&callsign) {
+                operator = guessed_op; // overwrite with new result
+            }
+        }
+
         Self {
             icao: a.icao.clone(),
             type_code: a.type_code.clone().unwrap_or("???".to_string()),
             operator,
-            callsign: a.callsign.clone().unwrap_or("".to_string()),
+            callsign,
             speed: a.ground_speed.unwrap_or(0.0),
             alt: a.alt_baro.unwrap_or(0.0),
             source: a.source_type.clone(),
