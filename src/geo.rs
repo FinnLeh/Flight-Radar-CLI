@@ -77,7 +77,7 @@ pub async fn resolve_location(query: &str) -> Result<(f64, f64), Box<dyn Error>>
 
     // Send request (IMPORTANT: Include User-Agent Header!)
     let resp = client.get(&url)
-        .header(USER_AGENT, "FlightRadarCLI/1.0 (finnleh5@gmail.com)")
+        .header(USER_AGENT, "FlightRadarCLI/1.0 (an.email@example.com)")
         .send()
         .await?
         .json::<Vec<NominatimResponse>>() // expecting a list
