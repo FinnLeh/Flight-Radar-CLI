@@ -3,4 +3,4 @@ intelligence.kml
 *.kml
 *.db
 *.csv
-.idea
+/.idea
